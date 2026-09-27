@@ -7,27 +7,10 @@
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/dashboard" class="brand">
-      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
-      <span>PocketSmart</span>
-      <span class="brand-badge">AI</span>
-    </a>
-    <div class="nav-menu">
-      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
-      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
-      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
-      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
-      <a href="/ai" class="nav-link active" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
-      <div class="user-badge">
-        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
-        <span>{{ user['name'] if user else 'User' }}</span>
-      </div>
-      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-    </div>
-  </nav>
+  {% include '_nav.html' %}
 
   <main class="container">
     <div class="ai-layout">
@@ -41,7 +24,7 @@
             <div>
               <h3 style="margin-bottom: 2px;">PocketSmart AI Coach</h3>
               <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success);">
-                <span style="width: 6px; height: 6px; background: var(--success); border-radius: 50%;"></span> Online • Gemini 3 Flash
+                <span class="status-dot"></span> {{ 'Gemini ready' if ai_available else 'Gemini API key required' }}
               </div>
             </div>
           </div>
@@ -69,7 +52,7 @@
           </div>
 
           <form id="chatForm" style="display: flex; gap: 10px;">
-            <input id="chatInput" class="input" placeholder="Ask anything about your money (e.g. Ennoda spending epdi irukku?)..." autocomplete="off" required>
+            <textarea id="chatInput" class="input chat-textarea" rows="1" placeholder="Ask about your recorded finances..." required></textarea>
             <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 12px 20px;">
               <i class="fa-solid fa-paper-plane"></i>
             </button>
@@ -127,100 +110,88 @@
     const chatInput = document.getElementById('chatInput');
     const clearChatBtn = document.getElementById('clearChatBtn');
     const sendBtn = document.getElementById('sendBtn');
+    const storageKey = `pocketsmart-chat-{{ user['id'] }}`;
+    let history = JSON.parse(localStorage.getItem(storageKey) || '[]');
 
-    // Fetch dashboard stats for side widget
+    function saveHistory() {
+      history = history.slice(-60);
+      localStorage.setItem(storageKey, JSON.stringify(history));
+    }
+
+    function appendMessage(text, sender = 'user', timestamp = new Date().toISOString(), persist = true) {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat-msg ${sender}`;
+      if (sender === 'ai') msgDiv.innerHTML = DOMPurify.sanitize(marked.parse(text));
+      else msgDiv.textContent = text;
+      const time = document.createElement('time');
+      time.className = 'chat-time';
+      time.dateTime = timestamp;
+      time.textContent = new Date(timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      msgDiv.appendChild(time);
+      chatMessages.appendChild(msgDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      if (persist) { history.push({text, sender, timestamp}); saveHistory(); }
+    }
+
+    if (history.length) {
+      chatMessages.replaceChildren();
+      history.forEach((item) => appendMessage(item.text, item.sender, item.timestamp, false));
+    }
+
     async function loadStats() {
       try {
-        const res = await fetch('/api/chart-data');
-        const data = await res.json();
-        // Calculate totals
-        const totalExp = (data.categoryTotals || []).reduce((a, b) => a + b, 0);
-        document.getElementById('sideExpenses').innerText = '₹' + totalExp.toLocaleString('en-IN', {minimumFractionDigits: 2});
-      } catch (e) {
-        console.log(e);
+        const response = await fetch('/api/chart-data');
+        if (!response.ok) return;
+        const data = await response.json();
+        const money = (value) => '₹' + Number(value || 0).toLocaleString('en-IN', {minimumFractionDigits:2});
+        document.getElementById('sideIncome').textContent = money(data.totalIncome);
+        document.getElementById('sideExpenses').textContent = money(data.totalExpenses);
+        document.getElementById('sideBalance').textContent = money(data.balance);
+      } catch (_) {
+        document.getElementById('sideIncome').textContent = 'Unavailable';
       }
     }
     loadStats();
-
-    function scrollToBottom() {
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    function appendMessage(text, sender = 'user') {
-      const msgDiv = document.createElement('div');
-      msgDiv.className = `chat-msg ${sender}`;
-      if (sender === 'ai') {
-        msgDiv.innerHTML = marked.parse(text);
-      } else {
-        msgDiv.textContent = text;
-      }
-      chatMessages.appendChild(msgDiv);
-      scrollToBottom();
-      return msgDiv;
-    }
 
     function showTypingIndicator() {
       const indicator = document.createElement('div');
       indicator.className = 'chat-msg ai typing-indicator';
       indicator.id = 'typingIndicator';
-      indicator.innerHTML = `
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-      `;
+      indicator.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
       chatMessages.appendChild(indicator);
-      scrollToBottom();
-    }
-
-    function removeTypingIndicator() {
-      const indicator = document.getElementById('typingIndicator');
-      if (indicator) indicator.remove();
+      chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     async function handleChat(message) {
-      if (!message) return;
+      if (!message || sendBtn.disabled) return;
       appendMessage(message, 'user');
       chatInput.value = '';
       showTypingIndicator();
       sendBtn.disabled = true;
-
       try {
-        const response = await fetch('/api/ai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message })
-        });
+        const response = await fetch('/api/ai', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message})});
         const data = await response.json();
-        removeTypingIndicator();
-        appendMessage(data.reply || 'No response from assistant.', 'ai');
-      } catch (err) {
-        removeTypingIndicator();
-        appendMessage('⚠️ Error contacting AI Assistant. Please check your internet connection or try again.', 'ai');
+        document.getElementById('typingIndicator')?.remove();
+        appendMessage(data.reply || 'AI assistant is temporarily unavailable. Please try again.', 'ai');
+      } catch (_) {
+        document.getElementById('typingIndicator')?.remove();
+        appendMessage('AI assistant is temporarily unavailable. Check your connection and try again.', 'ai');
       } finally {
         sendBtn.disabled = false;
         chatInput.focus();
       }
     }
 
-    chatForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const msg = chatInput.value.trim();
-      handleChat(msg);
+    chatForm.addEventListener('submit', (event) => { event.preventDefault(); handleChat(chatInput.value.trim()); });
+    chatInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); chatForm.requestSubmit(); }
     });
-
-    function sendPrompt(text) {
-      handleChat(text);
-    }
-
+    window.sendPrompt = (text) => handleChat(text);
     clearChatBtn.addEventListener('click', () => {
-      chatMessages.innerHTML = `
-        <div class="chat-msg ai">
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; color: var(--primary-light);">
-            <i class="fa-solid fa-sparkles"></i> Conversation Reset
-          </div>
-          How can I assist you with your finances today?
-        </div>
-      `;
+      history = [];
+      localStorage.removeItem(storageKey);
+      chatMessages.replaceChildren();
+      appendMessage('Conversation cleared. What would you like to understand about your recorded finances?', 'ai');
     });
   </script>
 </body>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Recommendations | PocketSmart AI</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></head>
+<body>
+  {% include '_nav.html' %}
+  <main class="container">
+    {% include '_flashes.html' %}
+    <div class="page-header"><div><h1>Financial insights</h1><p class="page-subtitle">Based on your recorded activity for {{ month }}. This is informational, not professional financial advice.</p></div></div>
+    <div class="stats-grid"><article class="stat-card income-card"><div class="stat-label">Income this month</div><div class="stat-val money-positive">₹{{ "{:,.2f}".format(income) }}</div></article><article class="stat-card expense-card"><div class="stat-label">Expenses this month</div><div class="stat-val money-negative">₹{{ "{:,.2f}".format(expenses) }}</div></article><article class="stat-card balance-card"><div class="stat-label">Recorded difference</div><div class="stat-val">₹{{ "{:,.2f}".format(balance) }}</div></article></div>
+    <section class="insight-list">{% for item in recommendations %}<article class="insight-row insight-{{ item['kind'] }}"><span class="insight-icon"><i class="fa-solid {{ 'fa-triangle-exclamation' if item['kind']=='warning' else ('fa-bullseye' if item['kind']=='goal' else 'fa-chart-simple') }}"></i></span><div><h2>{{ item['title'] }}</h2><p>{{ item['detail'] }}</p></div></article>{% endfor %}</section>
+    <p class="disclaimer">Based on your recorded data. Consider whether an action fits your circumstances before changing your financial plans.</p>
+  </main>
+</body>
+</html>

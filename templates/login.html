@@ -29,20 +29,10 @@
       <h1 style="font-size: 24px; margin-bottom: 6px;">Welcome Back 👋</h1>
       <p class="page-subtitle" style="margin-bottom: 24px;">Sign in to access your financial dashboard.</p>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-container">
-            {% for category, msg in messages %}
-              <div class="flash-message flash-{{ category }}">
-                <i class="fa-solid {{ 'fa-circle-check' if category=='success' else ('fa-circle-exclamation' if category=='error' else 'fa-circle-info') }}"></i>
-                <span>{{ msg }}</span>
-              </div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
+      {% include '_flashes.html' %}
 
-      <form method="post" action="/login">
+      <form method="post" action="/login" {% if firebase_server_ready %}data-firebase-auth="login"{% endif %}>
+        {% if firebase_server_ready %}<div class="flash-message flash-info" data-auth-message hidden></div>{% endif %}
         <div class="form-group">
           <label class="form-label">Email Address</label>
           <input class="input" type="email" name="email" placeholder="name@example.com" required autofocus>
@@ -50,7 +40,7 @@
 
         <div class="form-group">
           <label class="form-label">Password</label>
-          <input class="input" type="password" name="password" placeholder="••••••••" required>
+          <div class="password-field"><input class="input" type="password" name="password" placeholder="Your password" autocomplete="current-password" required><button type="button" class="password-toggle" aria-label="Show password"><i class="fa-regular fa-eye"></i></button></div>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
@@ -58,18 +48,15 @@
         </button>
       </form>
 
-      <div class="auth-divider">
-        <span>OR QUICK ACCESS</span>
-      </div>
-
-      <a href="/demo-login" class="btn btn-demo" style="width: 100%;">
-        <i class="fa-solid fa-bolt"></i> 1-Click Instant Demo Login
-      </a>
-
       <p style="text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 24px;">
         Don't have an account? <a href="/signup" style="color: var(--primary-light); font-weight: 600;">Create one here</a>
       </p>
     </div>
   </div>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% if firebase_server_ready %}
+    <script id="firebaseWebConfig" type="application/json">{{ firebase_web_config|tojson }}</script>
+    <script type="module" src="{{ url_for('static', filename='js/firebase-auth.js') }}"></script>
+  {% endif %}
 </body>
 </html>

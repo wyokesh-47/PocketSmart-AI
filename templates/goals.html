@@ -8,39 +8,10 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/dashboard" class="brand">
-      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
-      <span>PocketSmart</span>
-      <span class="brand-badge">AI</span>
-    </a>
-    <div class="nav-menu">
-      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
-      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
-      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
-      <a href="/goals" class="nav-link active"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
-      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
-      <div class="user-badge">
-        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
-        <span>{{ user['name'] if user else 'User' }}</span>
-      </div>
-      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-    </div>
-  </nav>
+  {% include '_nav.html' %}
 
   <main class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-container">
-          {% for category, msg in messages %}
-            <div class="flash-message flash-{{ category }}">
-              <i class="fa-solid {{ 'fa-circle-check' if category=='success' else ('fa-circle-exclamation' if category=='error' else 'fa-circle-info') }}"></i>
-              <span>{{ msg }}</span>
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+    {% include '_flashes.html' %}
 
     <div class="page-header">
       <div>
@@ -113,7 +84,7 @@
           </div>
 
           <div class="progress-container" style="height: 10px; margin: 12px 0;">
-            <div class="progress-bar" style="width: {{ pct }}%;"></div>
+            <progress class="budget-progress goal-progress" value="{{ pct }}" max="100" aria-label="{{ g['name'] }} savings progress"></progress>
           </div>
 
           <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
@@ -123,11 +94,20 @@
 
           <!-- Quick Deposit Form -->
           <form method="post" action="/goals/contribute/{{ g['id'] }}" style="display: flex; gap: 8px;">
-            <input class="input" type="number" step="0.01" name="amount" placeholder="+ Amount ₹" style="padding: 8px 12px; font-size: 13px;" required>
+            <input class="input" type="number" min="0.01" step="0.01" name="amount" placeholder="+ Amount ₹" style="padding: 8px 12px; font-size: 13px;" required>
             <button type="submit" class="btn btn-success btn-sm" style="white-space: nowrap;">
               <i class="fa-solid fa-plus"></i> Save
             </button>
           </form>
+          <details class="goal-edit"><summary class="btn btn-outline btn-sm"><i class="fa-solid fa-pen"></i> Edit goal</summary>
+            <form method="post" action="{{ url_for('edit_goal', goal_id=g['id']) }}" class="goal-edit-grid">
+              <input class="input" name="name" value="{{ g['name'] }}" maxlength="80" required aria-label="Goal name">
+              <input class="input" type="number" min="0.01" step="0.01" name="target" value="{{ g['target'] }}" required aria-label="Target amount">
+              <input class="input" type="number" min="0" step="0.01" name="saved" value="{{ g['saved'] }}" required aria-label="Saved amount">
+              <input class="input" type="date" name="deadline" value="{{ g['deadline'] or '' }}" aria-label="Target date">
+              <button class="btn btn-primary btn-sm">Update goal</button>
+            </form>
+          </details>
         </div>
       {% else %}
         <div class="card" style="grid-column: 1/-1; text-align: center; padding: 50px 20px;">

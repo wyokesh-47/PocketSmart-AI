@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Profile | PocketSmart AI</title><link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"></head>
+<body>
+  {% include '_nav.html' %}
+  <main class="container profile-main">
+    {% include '_flashes.html' %}
+    <div class="page-header"><div><h1>Your profile</h1><p class="page-subtitle">Manage the name and email associated with your account.</p></div></div>
+    <section class="card profile-card"><form method="post" action="{{ url_for('profile') }}">
+      <div class="form-group"><label class="form-label" for="name">Name</label><input class="input" id="name" name="name" maxlength="80" value="{{ user['name'] }}" required></div>
+      <div class="form-group"><label class="form-label" for="email">Email</label><input class="input" type="email" id="email" value="{{ user['email'] }}" readonly></div>
+      <p class="page-subtitle" style="margin-bottom:16px">Email and password are managed securely by Firebase Authentication.</p>
+      <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save profile</button>
+    </form></section>
+  </main>
+</body>
+</html>

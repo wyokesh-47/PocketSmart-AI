@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics | PocketSmart AI</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  {% include '_nav.html' %}
+  <main class="container">
+    {% include '_flashes.html' %}
+    <div class="page-header"><div><h1>Financial analytics</h1><p class="page-subtitle">A view of recorded income and spending, by month and category.</p></div></div>
+    <div class="stats-grid">
+      <article class="stat-card income-card"><div class="stat-label">Total income</div><div class="stat-val money-positive">₹{{ "{:,.2f}".format(total_income) }}</div></article>
+      <article class="stat-card expense-card"><div class="stat-label">Total expenses</div><div class="stat-val money-negative">₹{{ "{:,.2f}".format(total_expenses) }}</div></article>
+      <article class="stat-card balance-card"><div class="stat-label">Net recorded balance</div><div class="stat-val">₹{{ "{:,.2f}".format(balance) }}</div></article>
+      <article class="stat-card rate-card"><div class="stat-label">Average monthly spend · 6 months</div><div class="stat-val">₹{{ "{:,.2f}".format(average_monthly) }}</div></article>
+    </div>
+    <div class="analytics-grid">
+      <section class="card"><div class="card-header"><h3>Income vs expenses</h3></div><div class="chart-wrap"><canvas id="flowChart" aria-label="Income and expenses per month"></canvas></div></section>
+      <section class="card"><div class="card-header"><h3>Spending by category</h3></div><div class="chart-wrap"><canvas id="categoryChart" aria-label="Expense totals by category"></canvas></div></section>
+      <section class="card analytics-wide"><div class="card-header"><h3>Category totals</h3></div>{% if categories %}<div class="table-responsive"><table class="custom-table"><thead><tr><th>Category</th><th>Amount recorded</th></tr></thead><tbody>{% for row in categories %}<tr><td>{{ row['category'] }}</td><td class="money-negative">₹{{ "{:,.2f}".format(row['total']) }}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty-state">Add expenses to see category analytics.</p>{% endif %}</section>
+    </div>
+  </main>
+  <script>
+    const chartData = {{ chart|tojson }};
+    const colors = ['#16866a', '#e3794d', '#3974b9', '#ca9a36', '#9b5c86', '#4c9b9b', '#66716d', '#b65a51'];
+    const common = {responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#535e59'}}}, scales:{x:{ticks:{color:'#68736e'},grid:{color:'#e6e9e4'}},y:{beginAtZero:true,ticks:{color:'#68736e'},grid:{color:'#e6e9e4'}}}};
+    new Chart(document.getElementById('flowChart'), {type:'bar', data:{labels:chartData.labels,datasets:[{label:'Income',data:chartData.income,backgroundColor:'#16866a'},{label:'Expenses',data:chartData.expenses,backgroundColor:'#e3794d'}]}, options:common});
+    new Chart(document.getElementById('categoryChart'), {type:'doughnut', data:{labels:chartData.categories,datasets:[{data:chartData.categoryTotals,backgroundColor:colors,borderWidth:0}]}, options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:'#535e59'}}}}});
+  </script>
+</body>
+</html>

@@ -9,34 +9,46 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/dashboard" class="brand">
-      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
-      <span>PocketSmart</span>
-      <span class="brand-badge">AI</span>
-    </a>
-    <div class="nav-menu">
-      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
-      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
-      <a href="/budget" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
-      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
-      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
-      <div class="user-badge">
-        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
-        <span>{{ user['name'] if user else 'User' }}</span>
-      </div>
-      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-    </div>
-  </nav>
+  {% include '_nav.html' %}
 
   <main class="container">
+    {% include '_flashes.html' %}
     <div class="page-header">
       <div>
         <h1>Smart Budgeting & Analysis 📊</h1>
-        <p class="page-subtitle">Understand your financial habits with the 50/30/20 rule and category tracking.</p>
+        <p class="page-subtitle">Monthly category limits and recorded spending for {{ month }}.</p>
       </div>
       <a href="/ai" class="btn btn-primary"><i class="fa-solid fa-robot"></i> Get AI Budget Plan</a>
     </div>
+
+    <section class="card" style="margin-bottom:24px;">
+      <div class="card-header"><h3>Set a category limit for {{ month }}</h3></div>
+      <form method="post" action="{{ url_for('budget') }}" class="entry-grid">
+        <div class="form-group"><label class="form-label" for="budgetCategory">Category</label><input class="input" list="budgetCategories" id="budgetCategory" name="category" maxlength="60" required placeholder="Choose or enter category"><datalist id="budgetCategories">{% for c in categories_for_form %}<option value="{{ c['category'] }}">{% endfor %}</datalist></div>
+        <div class="form-group"><label class="form-label" for="budgetAmount">Monthly limit (₹)</label><input class="input" id="budgetAmount" type="number" min="0.01" step="0.01" name="amount" required></div>
+        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-floppy-disk"></i> Save limit</button>
+      </form>
+    </section>
+    <section class="card" style="margin-bottom:24px;">
+      <div class="card-header"><h3>Category budget usage</h3><span class="page-subtitle">This calendar month</span></div>
+      {% if category_budgets %}
+        <div class="budget-list">
+          {% for b in category_budgets %}
+            {% set pct = (b['spent'] / b['limit_amount'] * 100) if b['limit_amount'] else 0 %}
+            <article class="budget-row">
+              <div class="budget-row-head">
+                <strong>{{ b['category'] }}</strong>
+                <span>₹{{ "{:,.2f}".format(b['spent']) }} / ₹{{ "{:,.2f}".format(b['limit_amount']) }} <b class="{{ 'money-negative' if pct >= 100 else '' }}">{{ pct|round|int }}%</b></span>
+              </div>
+              <progress class="budget-progress {{ 'over-budget' if pct >= 100 else ('near-budget' if pct >= 80 else '') }}" value="{{ [pct, 100]|min }}" max="100" aria-label="{{ b['category'] }} budget usage"></progress>
+              <small class="page-subtitle">{% if pct >= 100 %}Limit exceeded by ₹{{ "{:,.2f}".format(b['spent'] - b['limit_amount']) }}{% elif pct >= 80 %}Approaching limit{% else %}₹{{ "{:,.2f}".format(b['limit_amount'] - b['spent']) }} remaining{% endif %}</small>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">No category limits for this month yet. Add one above.</p>
+      {% endif %}
+    </section>
 
     <!-- 50/30/20 Rule Grid -->
     <h2 style="margin-top: 10px; margin-bottom: 14px;"><i class="fa-solid fa-scale-balanced" style="color: var(--primary-light);"></i> 50/30/20 Ideal Budget Allocation</h2>
@@ -93,9 +105,7 @@
                   <span>{{ c['category'] }}</span>
                   <span style="color: #f87171;">₹{{ "{:,.2f}".format(c['total']) }} ({{ pct }}%)</span>
                 </div>
-                <div class="progress-container">
-                  <div class="progress-bar" style="width: {{ pct }}%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
-                </div>
+                <progress class="budget-progress category-progress" value="{{ pct }}" max="100" aria-label="{{ c['category'] }} share of expenses"></progress>
               </div>
             {% endfor %}
           </div>
@@ -109,10 +119,14 @@
     </div>
   </main>
 
+  <div id="budgetChartData" hidden data-categories="{{ categories | map(attribute='category') | list | tojson | forceescape }}" data-totals="{{ categories | map(attribute='total') | list | tojson | forceescape }}"></div>
   <script>
-    const ctx = document.getElementById('budgetChart').getContext('2d');
-    const categories = [{% for c in categories %}"{{ c['category'] }}",{% endfor %}];
-    const totals = [{% for c in categories %}{{ c['total'] }},{% endfor %}];
+    (() => {
+    const chartElement = document.getElementById('budgetChart');
+    const ctx = chartElement.getContext('2d');
+    const chartData = document.getElementById('budgetChartData');
+    const categories = JSON.parse(chartData.dataset.categories);
+    const totals = JSON.parse(chartData.dataset.totals);
 
     if (categories.length > 0) {
       new Chart(ctx, {
@@ -146,6 +160,7 @@
       ctx.textAlign = 'center';
       ctx.fillText('No data available', 150, 140);
     }
+    })();
   </script>
 </body>
 </html>

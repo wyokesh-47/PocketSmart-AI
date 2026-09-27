@@ -9,39 +9,10 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <nav class="navbar">
-    <a href="/dashboard" class="brand">
-      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
-      <span>PocketSmart</span>
-      <span class="brand-badge">AI</span>
-    </a>
-    <div class="nav-menu">
-      <a href="/dashboard" class="nav-link active"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
-      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
-      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
-      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
-      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
-      <div class="user-badge">
-        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
-        <span>{{ user['name'] if user else 'User' }}</span>
-      </div>
-      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
-    </div>
-  </nav>
+  {% include '_nav.html' %}
 
   <main class="container">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="flash-container">
-          {% for category, msg in messages %}
-            <div class="flash-message flash-{{ category }}">
-              <i class="fa-solid {{ 'fa-circle-check' if category=='success' else ('fa-circle-exclamation' if category=='error' else 'fa-circle-info') }}"></i>
-              <span>{{ msg }}</span>
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
+    {% include '_flashes.html' %}
 
     <div class="page-header">
       <div>
@@ -75,7 +46,7 @@
         <div class="stat-label">
           <i class="fa-solid fa-scale-balanced" style="color: var(--primary-light);"></i> Net Balance
         </div>
-        <div class="stat-val" style="color: {{ '#34d399' if balance >= 0 else '#f87171' }};">₹{{ "{:,.2f}".format(balance) }}</div>
+        <div class="stat-val {{ 'money-positive' if balance >= 0 else 'money-negative' }}">₹{{ "{:,.2f}".format(balance) }}</div>
         <div class="stat-desc">{{ 'Healthy positive balance' if balance >= 0 else 'Negative balance - take action' }}</div>
       </div>
 
@@ -177,7 +148,7 @@
                   <span style="color: var(--primary-light);">{{ pct }}%</span>
                 </div>
                 <div class="progress-container">
-                  <div class="progress-bar" style="width: {{ pct }}%;"></div>
+                  <progress class="budget-progress goal-progress" value="{{ pct }}" max="100" aria-label="{{ g['name'] }} savings progress"></progress>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted);">
                   <span>Saved: ₹{{ "{:,.2f}".format(g['saved']) }}</span>
@@ -253,11 +224,14 @@
     </div>
   </main>
 
+  <div id="dashboardChartData" hidden data-categories="{{ categories | map(attribute='category') | list | tojson | forceescape }}" data-totals="{{ categories | map(attribute='total') | list | tojson | forceescape }}"></div>
   <script>
-    // Initialize Category Chart
-    const ctx = document.getElementById('categoryChart').getContext('2d');
-    const categories = [{% for c in categories %}"{{ c['category'] }}",{% endfor %}];
-    const totals = [{% for c in categories %}{{ c['total'] }},{% endfor %}];
+    (() => {
+    const chartElement = document.getElementById('categoryChart');
+    const ctx = chartElement.getContext('2d');
+    const chartData = document.getElementById('dashboardChartData');
+    const categories = JSON.parse(chartData.dataset.categories);
+    const totals = JSON.parse(chartData.dataset.totals);
 
     if (categories.length > 0) {
       new Chart(ctx, {
@@ -291,6 +265,7 @@
       ctx.textAlign = 'center';
       ctx.fillText('No spending data to display yet', 150, 130);
     }
+    })();
   </script>
 </body>
 </html>

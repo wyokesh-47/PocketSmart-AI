@@ -1,0 +1,15 @@
+<nav class="navbar">
+  <a href="{{ url_for('dashboard') }}" class="brand"><span class="brand-mark"><i class="fa-solid fa-wallet"></i></span><span>PocketSmart</span><span class="brand-badge">AI</span></a>
+  <div class="nav-menu" aria-label="Main navigation">
+    <a href="{{ url_for('dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'dashboard' else '' }}"><i class="fa-solid fa-house"></i><span>Overview</span></a>
+    <a href="{{ url_for('income') }}" class="nav-link {{ 'active' if request.endpoint in ['income', 'edit_income'] else '' }}"><i class="fa-solid fa-arrow-trend-up"></i><span>Income</span></a>
+    <a href="{{ url_for('expenses') }}" class="nav-link {{ 'active' if request.endpoint in ['expenses', 'edit_expense'] else '' }}"><i class="fa-solid fa-receipt"></i><span>Expenses</span></a>
+    <a href="{{ url_for('budget') }}" class="nav-link {{ 'active' if request.endpoint == 'budget' else '' }}"><i class="fa-solid fa-chart-pie"></i><span>Budget</span></a>
+    <a href="{{ url_for('goals') }}" class="nav-link {{ 'active' if request.endpoint in ['goals', 'edit_goal'] else '' }}"><i class="fa-solid fa-bullseye"></i><span>Goals</span></a>
+    <a href="{{ url_for('analytics') }}" class="nav-link {{ 'active' if request.endpoint == 'analytics' else '' }}"><i class="fa-solid fa-chart-column"></i><span>Analytics</span></a>
+    <a href="{{ url_for('recommendations') }}" class="nav-link {{ 'active' if request.endpoint == 'recommendations' else '' }}"><i class="fa-regular fa-lightbulb"></i><span>Insights</span></a>
+    <a href="{{ url_for('ai') }}" class="nav-link {{ 'active' if request.endpoint == 'ai' else '' }}"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI Coach</span></a>
+    <a href="{{ url_for('profile') }}" class="nav-link {{ 'active' if request.endpoint == 'profile' else '' }}"><i class="fa-regular fa-user"></i><span>Profile</span></a>
+    <a href="{{ url_for('logout') }}" class="nav-link nav-logout" aria-label="Log out" title="Log out"><i class="fa-solid fa-right-from-bracket"></i><span>Exit</span></a>
+  </div>
+</nav>
