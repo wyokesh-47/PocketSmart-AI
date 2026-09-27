@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Financial Advisor | PocketSmart AI</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard" class="brand">
+      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
+      <span>PocketSmart</span>
+      <span class="brand-badge">AI</span>
+    </a>
+    <div class="nav-menu">
+      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
+      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
+      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
+      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
+      <a href="/ai" class="nav-link active" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
+      <div class="user-badge">
+        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
+        <span>{{ user['name'] if user else 'User' }}</span>
+      </div>
+      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="ai-layout">
+      <!-- Main Chat Container -->
+      <div class="card chat-card">
+        <div class="chat-header">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #a855f7); display: flex; align-items: center; justify-content: center; font-size: 18px; color: white;">
+              <i class="fa-solid fa-robot"></i>
+            </div>
+            <div>
+              <h3 style="margin-bottom: 2px;">PocketSmart AI Coach</h3>
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success);">
+                <span style="width: 6px; height: 6px; background: var(--success); border-radius: 50%;"></span> Online • Gemini 3 Flash
+              </div>
+            </div>
+          </div>
+          <button id="clearChatBtn" class="btn btn-outline btn-sm" title="Clear Conversation"><i class="fa-solid fa-rotate-right"></i> Reset</button>
+        </div>
+
+        <div id="chatMessages" class="chat-messages">
+          <div class="chat-msg ai">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; color: var(--primary-light);">
+              <i class="fa-solid fa-sparkles"></i> Hello {{ user['name'] }}!
+            </div>
+            I am your dedicated **PocketSmart AI Financial Coach**. I have direct visibility into your income, expenses, categories, and savings goals.
+            <br><br>
+            You can ask me questions in **English** or **Tamil / Tanglish**. Click any suggestion below or type your question!
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <div class="prompt-chips">
+            <button class="prompt-chip" onclick="sendPrompt('Where am I spending the most money?')">📊 Top Spending</button>
+            <button class="prompt-chip" onclick="sendPrompt('How can I save ₹10,000 more this month?')">💡 Money-Saving Tips</button>
+            <button class="prompt-chip" onclick="sendPrompt('Give me a 50/30/20 budget breakdown based on my income')">⚖️ 50/30/20 Breakdown</button>
+            <button class="prompt-chip" onclick="sendPrompt('Analyze my savings goals and tell me how to reach them faster')">🎯 Goals Strategy</button>
+            <button class="prompt-chip" onclick="sendPrompt('What is my current financial health status?')">🩺 Financial Health</button>
+          </div>
+
+          <form id="chatForm" style="display: flex; gap: 10px;">
+            <input id="chatInput" class="input" placeholder="Ask anything about your money (e.g. Ennoda spending epdi irukku?)..." autocomplete="off" required>
+            <button type="submit" id="sendBtn" class="btn btn-primary" style="padding: 12px 20px;">
+              <i class="fa-solid fa-paper-plane"></i>
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Right Column: Financial Data Summary Context Card -->
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        <div class="card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-database" style="color: var(--primary-light);"></i> Your Live Data</h3>
+          </div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            The AI uses your live data below to answer queries:
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-card); padding-bottom: 8px;">
+              <span style="color: var(--text-muted); font-size: 13px;">User:</span>
+              <span style="font-weight: 600;">{{ user['name'] }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-card); padding-bottom: 8px;">
+              <span style="color: var(--text-muted); font-size: 13px;">Income Recorded:</span>
+              <span style="font-weight: 700; color: #34d399;" id="sideIncome">₹...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-card); padding-bottom: 8px;">
+              <span style="color: var(--text-muted); font-size: 13px;">Total Expenses:</span>
+              <span style="font-weight: 700; color: #f87171;" id="sideExpenses">₹...</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-card); padding-bottom: 8px;">
+              <span style="color: var(--text-muted); font-size: 13px;">Net Balance:</span>
+              <span style="font-weight: 700; color: var(--primary-light);" id="sideBalance">₹...</span>
+            </div>
+          </div>
+
+          <a href="/dashboard" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 18px;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Open Dashboard
+          </a>
+        </div>
+
+        <div class="card" style="background: rgba(99, 102, 241, 0.08); border-color: rgba(99, 102, 241, 0.25);">
+          <h4 style="color: var(--primary-light); margin-bottom: 8px;"><i class="fa-solid fa-lightbulb"></i> Pro AI Tip</h4>
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+            Add your daily expenses regularly so Gemini AI can give you hyper-personalized recommendations!
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const chatMessages = document.getElementById('chatMessages');
+    const chatForm = document.getElementById('chatForm');
+    const chatInput = document.getElementById('chatInput');
+    const clearChatBtn = document.getElementById('clearChatBtn');
+    const sendBtn = document.getElementById('sendBtn');
+
+    // Fetch dashboard stats for side widget
+    async function loadStats() {
+      try {
+        const res = await fetch('/api/chart-data');
+        const data = await res.json();
+        // Calculate totals
+        const totalExp = (data.categoryTotals || []).reduce((a, b) => a + b, 0);
+        document.getElementById('sideExpenses').innerText = '₹' + totalExp.toLocaleString('en-IN', {minimumFractionDigits: 2});
+      } catch (e) {
+        console.log(e);
+      }
+    }
+    loadStats();
+
+    function scrollToBottom() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function appendMessage(text, sender = 'user') {
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat-msg ${sender}`;
+      if (sender === 'ai') {
+        msgDiv.innerHTML = marked.parse(text);
+      } else {
+        msgDiv.textContent = text;
+      }
+      chatMessages.appendChild(msgDiv);
+      scrollToBottom();
+      return msgDiv;
+    }
+
+    function showTypingIndicator() {
+      const indicator = document.createElement('div');
+      indicator.className = 'chat-msg ai typing-indicator';
+      indicator.id = 'typingIndicator';
+      indicator.innerHTML = `
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      `;
+      chatMessages.appendChild(indicator);
+      scrollToBottom();
+    }
+
+    function removeTypingIndicator() {
+      const indicator = document.getElementById('typingIndicator');
+      if (indicator) indicator.remove();
+    }
+
+    async function handleChat(message) {
+      if (!message) return;
+      appendMessage(message, 'user');
+      chatInput.value = '';
+      showTypingIndicator();
+      sendBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await response.json();
+        removeTypingIndicator();
+        appendMessage(data.reply || 'No response from assistant.', 'ai');
+      } catch (err) {
+        removeTypingIndicator();
+        appendMessage('⚠️ Error contacting AI Assistant. Please check your internet connection or try again.', 'ai');
+      } finally {
+        sendBtn.disabled = false;
+        chatInput.focus();
+      }
+    }
+
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const msg = chatInput.value.trim();
+      handleChat(msg);
+    });
+
+    function sendPrompt(text) {
+      handleChat(text);
+    }
+
+    clearChatBtn.addEventListener('click', () => {
+      chatMessages.innerHTML = `
+        <div class="chat-msg ai">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-weight: 700; color: var(--primary-light);">
+            <i class="fa-solid fa-sparkles"></i> Conversation Reset
+          </div>
+          How can I assist you with your finances today?
+        </div>
+      `;
+    });
+  </script>
+</body>
+</html>

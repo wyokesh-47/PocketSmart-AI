@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expenses | PocketSmart AI</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard" class="brand">
+      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
+      <span>PocketSmart</span>
+      <span class="brand-badge">AI</span>
+    </a>
+    <div class="nav-menu">
+      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
+      <a href="/expenses" class="nav-link active"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
+      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
+      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
+      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
+      <div class="user-badge">
+        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
+        <span>{{ user['name'] if user else 'User' }}</span>
+      </div>
+      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, msg in messages %}
+            <div class="flash-message flash-{{ category }}">
+              <i class="fa-solid {{ 'fa-circle-check' if category=='success' else ('fa-circle-exclamation' if category=='error' else 'fa-circle-info') }}"></i>
+              <span>{{ msg }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <div>
+        <h1>Expense Tracker 💸</h1>
+        <p class="page-subtitle">Log, categorize, and monitor every transaction.</p>
+      </div>
+      <div class="stat-card expense-card" style="padding: 12px 24px; min-width: 200px;">
+        <div class="stat-label">Total Outflow</div>
+        <div class="stat-val" style="font-size: 22px; color: #f87171; margin: 2px 0;">₹{{ "{:,.2f}".format(total_spent) }}</div>
+      </div>
+    </div>
+
+    <!-- Add Expense Form -->
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-plus-circle" style="color: var(--primary-light);"></i> Record New Expense</h3>
+      </div>
+      <form method="post" action="/expenses">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 120px; gap: 14px; align-items: flex-end;">
+          <div class="form-group">
+            <label class="form-label">Amount (₹)</label>
+            <input class="input" type="number" step="0.01" name="amount" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Category</label>
+            <select class="select" name="category" required>
+              <option value="Groceries & Food">Groceries & Food</option>
+              <option value="Rent & Housing">Rent & Housing</option>
+              <option value="Utilities & Bills">Utilities & Bills</option>
+              <option value="Dining & Outing">Dining & Outing</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Shopping & Misc">Shopping & Misc</option>
+              <option value="Healthcare">Healthcare</option>
+              <option value="Education">Education</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description (Optional)</label>
+            <input class="input" type="text" name="description" placeholder="e.g. Swiggy order, Petrol">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Date</label>
+            <input class="input" type="date" name="date" id="expenseDate">
+          </div>
+          <button type="submit" class="btn btn-primary" style="height: 44px; margin-bottom: 0;">
+            <i class="fa-solid fa-plus"></i> Add
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Expense History Table -->
+    <div class="card">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-list-check" style="color: var(--primary-light);"></i> All Expense Records ({{ expenses|length }})</h3>
+      </div>
+      {% if expenses %}
+        <div class="table-responsive">
+          <table class="custom-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for e in expenses %}
+                <tr>
+                  <td style="color: var(--text-muted); font-size: 13px;">{{ e['date'] }}</td>
+                  <td>
+                    {% if 'Food' in e['category'] or 'Groceries' in e['category'] %}
+                      <span class="badge badge-food"><i class="fa-solid fa-burger"></i> {{ e['category'] }}</span>
+                    {% elif 'Housing' in e['category'] or 'Rent' in e['category'] %}
+                      <span class="badge badge-housing"><i class="fa-solid fa-house"></i> {{ e['category'] }}</span>
+                    {% elif 'Transport' in e['category'] %}
+                      <span class="badge badge-transport"><i class="fa-solid fa-car"></i> {{ e['category'] }}</span>
+                    {% elif 'Utilities' in e['category'] or 'Bills' in e['category'] %}
+                      <span class="badge badge-utilities"><i class="fa-solid fa-bolt"></i> {{ e['category'] }}</span>
+                    {% elif 'Dining' in e['category'] %}
+                      <span class="badge badge-dining"><i class="fa-solid fa-utensils"></i> {{ e['category'] }}</span>
+                    {% elif 'Shopping' in e['category'] %}
+                      <span class="badge badge-shopping"><i class="fa-solid fa-bag-shopping"></i> {{ e['category'] }}</span>
+                    {% else %}
+                      <span class="badge badge-default"><i class="fa-solid fa-tag"></i> {{ e['category'] }}</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ e['description'] or '—' }}</td>
+                  <td style="font-weight: 700; color: #f87171; font-size: 15px;">₹{{ "{:,.2f}".format(e['amount']) }}</td>
+                  <td style="text-align: right;">
+                    <form method="post" action="/api/delete-expense/{{ e['id'] }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this expense?');">
+                      <button type="submit" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px 0; color: var(--text-muted);">
+          <i class="fa-solid fa-receipt" style="font-size: 36px; margin-bottom: 12px; opacity: 0.5;"></i>
+          <p>No expenses found. Add your first transaction above to start tracking!</p>
+        </div>
+      {% endif %}
+    </div>
+  </main>
+
+  <script>
+    document.getElementById('expenseDate').valueAsDate = new Date();
+  </script>
+</body>
+</html>

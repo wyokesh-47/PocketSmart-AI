@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Budget & Analytics | PocketSmart AI</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard" class="brand">
+      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
+      <span>PocketSmart</span>
+      <span class="brand-badge">AI</span>
+    </a>
+    <div class="nav-menu">
+      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
+      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
+      <a href="/budget" class="nav-link active"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
+      <a href="/goals" class="nav-link"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
+      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
+      <div class="user-badge">
+        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
+        <span>{{ user['name'] if user else 'User' }}</span>
+      </div>
+      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div class="page-header">
+      <div>
+        <h1>Smart Budgeting & Analysis 📊</h1>
+        <p class="page-subtitle">Understand your financial habits with the 50/30/20 rule and category tracking.</p>
+      </div>
+      <a href="/ai" class="btn btn-primary"><i class="fa-solid fa-robot"></i> Get AI Budget Plan</a>
+    </div>
+
+    <!-- 50/30/20 Rule Grid -->
+    <h2 style="margin-top: 10px; margin-bottom: 14px;"><i class="fa-solid fa-scale-balanced" style="color: var(--primary-light);"></i> 50/30/20 Ideal Budget Allocation</h2>
+    <div class="stats-grid">
+      <div class="card" style="border-top: 4px solid #6366f1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3>50% Needs</h3>
+          <span class="badge badge-housing">Essential</span>
+        </div>
+        <div class="stat-val" style="font-size: 26px; color: #818cf8;">₹{{ "{:,.2f}".format(needs_budget) }}</div>
+        <p style="color: var(--text-muted); font-size: 13px;">Rent, Groceries, Utilities, Healthcare, Fuel</p>
+      </div>
+
+      <div class="card" style="border-top: 4px solid #ec4899;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3>30% Wants</h3>
+          <span class="badge badge-dining">Lifestyle</span>
+        </div>
+        <div class="stat-val" style="font-size: 26px; color: #f472b6;">₹{{ "{:,.2f}".format(wants_budget) }}</div>
+        <p style="color: var(--text-muted); font-size: 13px;">Dining out, Shopping, Subscriptions, Movies</p>
+      </div>
+
+      <div class="card" style="border-top: 4px solid #10b981;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h3>20% Savings & Debt</h3>
+          <span class="badge badge-shopping">Growth</span>
+        </div>
+        <div class="stat-val" style="font-size: 26px; color: #34d399;">₹{{ "{:,.2f}".format(savings_budget) }}</div>
+        <p style="color: var(--text-muted); font-size: 13px;">Emergency Fund, Investments, Goal Deposits</p>
+      </div>
+    </div>
+
+    <!-- Category Spending Breakdown -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px;" class="chart-section">
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-chart-donut" style="color: var(--primary-light);"></i> Spending Distribution</h3>
+        </div>
+        <div style="position: relative; height: 280px;">
+          <canvas id="budgetChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3><i class="fa-solid fa-list-ol" style="color: var(--primary-light);"></i> Spending by Category</h3>
+        </div>
+        {% if categories %}
+          <div style="display: flex; flex-direction: column; gap: 14px; max-height: 280px; overflow-y: auto; padding-right: 6px;">
+            {% for c in categories %}
+              {% set pct = ((c['total'] / expenses) * 100)|round(1) if expenses > 0 else 0 %}
+              <div style="background: rgba(255, 255, 255, 0.02); padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+                <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 4px;">
+                  <span>{{ c['category'] }}</span>
+                  <span style="color: #f87171;">₹{{ "{:,.2f}".format(c['total']) }} ({{ pct }}%)</span>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-bar" style="width: {{ pct }}%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="text-align: center; padding: 50px 0; color: var(--text-muted);">
+            <p>No expense data available to build budget charts.</p>
+            <a href="/expenses" class="btn btn-outline btn-sm" style="margin-top: 10px;">+ Add Expenses</a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </main>
+
+  <script>
+    const ctx = document.getElementById('budgetChart').getContext('2d');
+    const categories = [{% for c in categories %}"{{ c['category'] }}",{% endfor %}];
+    const totals = [{% for c in categories %}{{ c['total'] }},{% endfor %}];
+
+    if (categories.length > 0) {
+      new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: categories,
+          datasets: [{
+            data: totals,
+            backgroundColor: [
+              '#6366f1', '#10b981', '#f59e0b', '#ef4444', 
+              '#ec4899', '#8b5cf6', '#06b6d4', '#64748b'
+            ],
+            borderWidth: 2,
+            borderColor: '#121a2f'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { color: '#94a3b8', font: { family: 'Plus Jakarta Sans', size: 12 } }
+            }
+          }
+        }
+      });
+    } else {
+      ctx.font = '14px Plus Jakarta Sans';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.fillText('No data available', 150, 140);
+    }
+  </script>
+</body>
+</html>

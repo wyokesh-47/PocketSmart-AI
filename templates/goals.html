@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Savings Goals | PocketSmart AI</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+  <nav class="navbar">
+    <a href="/dashboard" class="brand">
+      <i class="fa-solid fa-wallet" style="color: var(--primary-light);"></i>
+      <span>PocketSmart</span>
+      <span class="brand-badge">AI</span>
+    </a>
+    <div class="nav-menu">
+      <a href="/dashboard" class="nav-link"><i class="fa-solid fa-house"></i> <span>Dashboard</span></a>
+      <a href="/expenses" class="nav-link"><i class="fa-solid fa-receipt"></i> <span>Expenses</span></a>
+      <a href="/budget" class="nav-link"><i class="fa-solid fa-chart-pie"></i> <span>Budget</span></a>
+      <a href="/goals" class="nav-link active"><i class="fa-solid fa-bullseye"></i> <span>Goals</span></a>
+      <a href="/ai" class="nav-link" style="color: #a855f7; font-weight: 700;"><i class="fa-solid fa-wand-magic-sparkles"></i> <span>AI Coach</span></a>
+      <div class="user-badge">
+        <div class="user-avatar">{{ user['name'][0]|upper if user else 'U' }}</div>
+        <span>{{ user['name'] if user else 'User' }}</span>
+      </div>
+      <a href="/logout" class="btn btn-outline btn-sm" title="Logout"><i class="fa-solid fa-right-from-bracket"></i></a>
+    </div>
+  </nav>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for category, msg in messages %}
+            <div class="flash-message flash-{{ category }}">
+              <i class="fa-solid {{ 'fa-circle-check' if category=='success' else ('fa-circle-exclamation' if category=='error' else 'fa-circle-info') }}"></i>
+              <span>{{ msg }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="page-header">
+      <div>
+        <h1>Savings Goals 🎯</h1>
+        <p class="page-subtitle">Set targets, track milestones, and fund your financial ambitions.</p>
+      </div>
+      <div style="display: flex; gap: 14px;">
+        <div class="stat-card rate-card" style="padding: 10px 20px;">
+          <div class="stat-label">Total Saved</div>
+          <div class="stat-val" style="font-size: 20px; color: #34d399; margin: 2px 0;">₹{{ "{:,.2f}".format(total_saved) }}</div>
+        </div>
+        <div class="stat-card" style="padding: 10px 20px;">
+          <div class="stat-label">Target Sum</div>
+          <div class="stat-val" style="font-size: 20px; color: var(--primary-light); margin: 2px 0;">₹{{ "{:,.2f}".format(total_target) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Create Goal Form -->
+    <div class="card" style="margin-bottom: 28px;">
+      <div class="card-header">
+        <h3><i class="fa-solid fa-plus-circle" style="color: var(--primary-light);"></i> Create New Savings Goal</h3>
+      </div>
+      <form method="post" action="/goals">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 140px; gap: 14px; align-items: flex-end;">
+          <div class="form-group">
+            <label class="form-label">Goal Title</label>
+            <input class="input" type="text" name="name" placeholder="e.g. Vacation Trip, Emergency Fund" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Amount (₹)</label>
+            <input class="input" type="number" step="0.01" name="target" placeholder="50000" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Initial Amount (₹)</label>
+            <input class="input" type="number" step="0.01" name="saved" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Target Deadline</label>
+            <input class="input" type="date" name="deadline">
+          </div>
+          <button type="submit" class="btn btn-primary" style="height: 44px; margin-bottom: 0;">
+            <i class="fa-solid fa-flag"></i> Set Goal
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Goals Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+      {% for g in goals %}
+        {% set pct = [((g['saved'] / g['target']) * 100)|round(1), 100]|min if g['target'] > 0 else 0 %}
+        {% set remaining = [g['target'] - g['saved'], 0]|max %}
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+            <div>
+              <h3 style="font-size: 18px;">{{ g['name'] }}</h3>
+              <p style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">
+                <i class="fa-regular fa-calendar"></i> Deadline: {{ g['deadline'] or 'No deadline' }}
+              </p>
+            </div>
+            <form method="post" action="/api/delete-goal/{{ g['id'] }}" onsubmit="return confirm('Delete this savings goal?');">
+              <button type="submit" class="btn btn-danger btn-sm" title="Delete Goal"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px;">
+            <span style="font-size: 24px; font-weight: 800; color: #34d399;">₹{{ "{:,.2f}".format(g['saved']) }}</span>
+            <span style="color: var(--text-muted); font-size: 14px;">of ₹{{ "{:,.2f}".format(g['target']) }}</span>
+          </div>
+
+          <div class="progress-container" style="height: 10px; margin: 12px 0;">
+            <div class="progress-bar" style="width: {{ pct }}%;"></div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            <span>{{ pct }}% Completed</span>
+            <span>₹{{ "{:,.2f}".format(remaining) }} Remaining</span>
+          </div>
+
+          <!-- Quick Deposit Form -->
+          <form method="post" action="/goals/contribute/{{ g['id'] }}" style="display: flex; gap: 8px;">
+            <input class="input" type="number" step="0.01" name="amount" placeholder="+ Amount ₹" style="padding: 8px 12px; font-size: 13px;" required>
+            <button type="submit" class="btn btn-success btn-sm" style="white-space: nowrap;">
+              <i class="fa-solid fa-plus"></i> Save
+            </button>
+          </form>
+        </div>
+      {% else %}
+        <div class="card" style="grid-column: 1/-1; text-align: center; padding: 50px 20px;">
+          <i class="fa-solid fa-bullseye" style="font-size: 40px; color: var(--primary-light); opacity: 0.5; margin-bottom: 16px;"></i>
+          <h2>No Savings Goals Yet</h2>
+          <p style="color: var(--text-muted); margin-top: 8px;">Setting defined savings goals gives your money purpose. Create one using the form above!</p>
+        </div>
+      {% endfor %}
+    </div>
+  </main>
+</body>
+</html>
