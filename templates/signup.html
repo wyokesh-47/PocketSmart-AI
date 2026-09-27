@@ -32,7 +32,7 @@
       {% include '_flashes.html' %}
 
       <form method="post" action="/signup" {% if firebase_server_ready %}data-firebase-auth="signup"{% endif %}>
-        {% if firebase_server_ready %}<div class="flash-message flash-info" data-auth-message hidden></div>{% endif %}
+        {% if firebase_server_ready %}<div class="flash-message flash-info" data-auth-message hidden style="display: none;"></div>{% endif %}
         <div class="form-group">
           <label class="form-label">Full Name</label>
           <input class="input" type="text" name="name" value="{{ name or '' }}" placeholder="John Doe" required autofocus>

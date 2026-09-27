@@ -94,8 +94,14 @@ if (form && configElement) {
 
   function showMessage(text, isError) {
     if (!message) return;
+    if (!text) {
+      message.hidden = true;
+      message.style.display = 'none';
+      return;
+    }
     message.hidden = false;
-    message.className = isError ? 'flash-message flash-error' : 'flash-message flash-success';
+    message.style.display = 'flex';
+    message.className = isError ? 'flash-message flash-error' : 'flash-message flash-info';
     message.textContent = text;
   }
 
