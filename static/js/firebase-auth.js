@@ -14,58 +14,88 @@ const submitButton = form?.querySelector('button[type="submit"]');
 const configElement = document.getElementById('firebaseWebConfig');
 
 if (form && configElement) {
-  const firebaseConfig = JSON.parse(configElement.textContent);
-  const auth = getAuth(initializeApp(firebaseConfig));
+  let firebaseConfig = {};
+  try {
+    firebaseConfig = JSON.parse(configElement.textContent || '{}');
+  } catch (e) {
+    console.error('Invalid Firebase Web Config JSON', e);
+  }
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    if (!form.reportValidity()) return;
+  if (firebaseConfig.apiKey && firebaseConfig.projectId) {
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
 
-    const formData = new FormData(form);
-    const name = String(formData.get('name') || '').trim();
-    const email = String(formData.get('email') || '').trim().toLowerCase();
-    const password = String(formData.get('password') || '');
-    if (form.dataset.firebaseAuth === 'signup' && password !== formData.get('confirm_password')) {
-      showMessage('Passwords do not match. Please re-enter.', true);
-      return;
-    }
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!form.reportValidity()) return;
 
-    submitButton.disabled = true;
-    submitButton.setAttribute('aria-busy', 'true');
-    try {
-      let credential;
+      const formData = new FormData(form);
+      const name = String(formData.get('name') || '').trim();
+      const email = String(formData.get('email') || '').trim().toLowerCase();
+      const password = String(formData.get('password') || '');
+
       if (form.dataset.firebaseAuth === 'signup') {
-        credential = await createUserWithEmailAndPassword(auth, email, password);
-        await updateProfile(credential.user, {displayName: name});
-        await sendEmailVerification(credential.user);
-        showMessage('Check your email and verify your address, then sign in.', false);
+        const confirmPassword = String(formData.get('confirm_password') || '');
+        if (password !== confirmPassword) {
+          showMessage('Passwords do not match. Please re-enter.', true);
+          return;
+        }
+        if (password.length < 6) {
+          showMessage('Password must be at least 6 characters long.', true);
+          return;
+        }
+      }
+
+      submitButton.disabled = true;
+      submitButton.setAttribute('aria-busy', 'true');
+      const originalText = submitButton.innerHTML;
+      submitButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Authenticating...';
+
+      try {
+        let credential;
+        if (form.dataset.firebaseAuth === 'signup') {
+          credential = await createUserWithEmailAndPassword(auth, email, password);
+          if (name) {
+            await updateProfile(credential.user, { displayName: name });
+          }
+          try {
+            await sendEmailVerification(credential.user);
+          } catch (verErr) {
+            console.warn('Verification email non-critical error:', verErr);
+          }
+        } else {
+          credential = await signInWithEmailAndPassword(auth, email, password);
+        }
+
+        const idToken = await getIdToken(credential.user, true);
+        const response = await fetch('/auth/firebase', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken, name }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Could not complete session login.');
+        }
+
+        showMessage('Success! Redirecting...', false);
+        window.location.assign(result.redirect || '/dashboard');
+      } catch (error) {
+        showMessage(friendlyFirebaseError(error), true);
         submitButton.disabled = false;
         submitButton.removeAttribute('aria-busy');
-        return;
-      } else {
-        credential = await signInWithEmailAndPassword(auth, email, password);
+        submitButton.innerHTML = originalText;
       }
-      const idToken = await getIdToken(credential.user, true);
-      const response = await fetch('/auth/firebase', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({idToken, name}),
-      });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Could not finish sign-in.');
-      window.location.assign(result.redirect || '/dashboard');
-    } catch (error) {
-      showMessage(friendlyFirebaseError(error), true);
-      submitButton.disabled = false;
-      submitButton.removeAttribute('aria-busy');
-    }
-  });
+    });
+  } else {
+    console.warn('Firebase config missing or incomplete');
+  }
 
   function showMessage(text, isError) {
     if (!message) return;
     message.hidden = false;
-    message.classList.toggle('flash-error', isError);
-    message.classList.toggle('flash-info', !isError);
+    message.className = isError ? 'flash-message flash-error' : 'flash-message flash-success';
     message.textContent = text;
   }
 
@@ -73,11 +103,14 @@ if (form && configElement) {
     const messages = {
       'auth/email-already-in-use': 'An account with this email already exists. Sign in instead.',
       'auth/invalid-credential': 'Email or password is incorrect.',
-      'auth/invalid-email': 'Enter a valid email address.',
-      'auth/weak-password': 'Use a stronger password with at least 6 characters.',
-      'auth/too-many-requests': 'Too many attempts. Wait a little and try again.',
-      'auth/network-request-failed': 'Could not reach Firebase. Check your connection.',
+      'auth/wrong-password': 'Incorrect password.',
+      'auth/user-not-found': 'No account found with this email.',
+      'auth/invalid-email': 'Please enter a valid email address.',
+      'auth/weak-password': 'Password should be at least 6 characters.',
+      'auth/too-many-requests': 'Too many attempts. Please wait a moment and try again.',
+      'auth/network-request-failed': 'Could not reach Firebase. Check your internet connection.',
+      'auth/operation-not-allowed': 'Email/Password sign-in is not enabled in Firebase Console.',
     };
-    return messages[error.code] || error.message || 'Firebase sign-in failed. Check the Firebase project configuration.';
+    return messages[error.code] || error.message || 'Authentication failed. Please check your credentials.';
   }
 }
